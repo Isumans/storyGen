@@ -9,10 +9,21 @@ class Story(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
-    content = Column(String, nullable=False)
+    session_id = Column(String, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    is_published = Column(Boolean, default=False)
-    author_id = Column(Integer, ForeignKey("users.id"))
 
+    nodes = relationship("StoryNode", back_populates="story")
     author = relationship("User", back_populates="stories")
+
+
+class StoryNode(Base):
+    __tablename__ = "story_nodes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    story_id = Column(Integer, ForeignKey("stories.id"), index=True)
+    content = Column(String, nullable=False)
+    is_root = Column(Boolean, default=False)
+    is_wining_ending = Column(Boolean, default=False)
+    options = Column(JSON, default=list)
+
+    story = relationship("Story", back_populates="nodes")
