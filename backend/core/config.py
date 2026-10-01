@@ -7,7 +7,11 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api"
     DEBUG: bool = True
     ALLOWED_ORIGINS: Annotated[List[str], NoDecode] = []
-    OPENAI_API_KEY: str
+    GROQ_API_KEY: str | None = None
+    OPENAI_API_KEY: str | None = None
+    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    GROQ_MODEL: str = "openai/gpt-oss-20b"
+    GROQ_MAX_TOKENS: int = 4096
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     def parse_allowed_origins(cls,v:str) -> List[str]:

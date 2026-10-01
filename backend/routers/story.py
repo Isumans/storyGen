@@ -12,6 +12,7 @@ from schemas.story import (
     completeStoryNodeResponse, completeStoryResponse, CreateStoryRequest
 )
 from schemas.job import StoryJobResponse
+from core.story_generator import StoryGenerator
 
 
 router = APIRouter(
@@ -66,13 +67,17 @@ def generate_story_task(job_id:str, theme:str, session_id:str):
             job.status = "in_progress"
             db.commit()
 
-            story = {} #todO: generate story
+            story = StoryGenerator.generate_story(db, session_id, theme)
 
-            job.story_id = 1 #todo: update story id
+            job.story_id = story.id
             job.status = "completed"
             job.completed_at = datetime.utcnow()
             db.commit()
         except Exception as e:
+            db.rollback()
+            job = db.query(StoryJob).filter(StoryJob.job_id == job_id).first()
+            if not job:
+                return
             job.status = "failed"
             job.completed_at = datetime.now()
             job.error = str(e)
@@ -90,4 +95,28 @@ def get_complete_story(story_id:int, db: Session= Depends(get_db)):
     return complete_story
 
 def build_complete_story_tree(db: Session, story: Story) -> completeStoryResponse:
-    pass
+    nodes = db.query(StoryNode).filter(StoryNode.story_id == story.id).all()
+
+    node_dict ={}
+    for node in nodes:
+        node_response = completeStoryNodeResponse(
+            id=node.id,
+            content=node.content,
+            is_ending=node.is_ending,
+            is_winning_ending=node.is_winning_ending,
+            options=node.options
+        )
+        node_dict[node.id] = node_response
+
+    root_node = next((node for node in nodes if node.is_root), None)
+    if not root_node:
+        raise exceptions.HTTPException(status_code=500, detail="Root node not found for the story")
+
+    return completeStoryResponse(
+        id=story.id,
+        title=story.title,
+        root_node=node_dict[root_node.id],
+        session_id=story.session_id,
+        created_at=story.created_at,
+        all_nodes=node_dict
+    )

@@ -22,7 +22,8 @@ class StoryNode(Base):
     story_id = Column(Integer, ForeignKey("stories.id"), index=True)
     content = Column(String, nullable=False)
     is_root = Column(Boolean, default=False)
-    is_wining_ending = Column(Boolean, default=False)
+    is_ending = Column(Boolean, default=False)
+    is_winning_ending = Column(Boolean, default=False)
     options = Column(JSON, default=list)
 
     story = relationship("Story", back_populates="nodes")
