@@ -1,8 +1,8 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from backend.db.database import Base
+from db.database import Base
 
 class Story(Base):
     __tablename__ = "stories"
@@ -13,7 +13,6 @@ class Story(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     nodes = relationship("StoryNode", back_populates="story")
-    author = relationship("User", back_populates="stories")
 
 
 class StoryNode(Base):

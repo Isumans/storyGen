@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, func
 from sqlalchemy.orm import relationship
 
-from backend.db.database import Base
+from db.database import Base
 
 class StoryJob(Base):
     __tablename__ = "story_jobs"

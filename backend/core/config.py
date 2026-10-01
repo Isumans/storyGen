@@ -1,12 +1,12 @@
-from typing import List
-from pydantic_settings import BaseSettings
+from typing import Annotated, List
+from pydantic_settings import BaseSettings, NoDecode
 from pydantic import field_validator
 
 class Settings(BaseSettings):
     DATABASE_URL: str
     API_PREFIX: str = "/api"
     DEBUG: bool = True
-    ALLOWED_ORIGINS: List[str] = []
+    ALLOWED_ORIGINS: Annotated[List[str], NoDecode] = []
     OPENAI_API_KEY: str
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
@@ -16,3 +16,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+
+
+settings = Settings()
