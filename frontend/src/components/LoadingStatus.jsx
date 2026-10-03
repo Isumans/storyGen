@@ -11,3 +11,4 @@ function LoadingStatus({theme}){
         </p>
     </div>
 }
+export default LoadingStatus;

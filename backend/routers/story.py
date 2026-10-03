@@ -85,7 +85,7 @@ def generate_story_task(job_id:str, theme:str, session_id:str):
     finally:
         db.close()
 
-@router.get("{story_id}/complete", response_model=completeStoryResponse)
+@router.get("/{story_id}/complete", response_model=completeStoryResponse)
 def get_complete_story(story_id:int, db: Session= Depends(get_db)):
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
