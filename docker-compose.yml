@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:18
+    container_name: storygen-db
+
+    environment:
+      POSTGRES_DB: storygen
+      POSTGRES_USER: storygen
+      POSTGRES_PASSWORD: storygen_password
+
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storygen -d storygen"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  backend:
+    build:
+      context: ./backend
+
+    container_name: storygen-backend
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      DATABASE_URL: postgresql+psycopg2://storygen:storygen_password@db:5432/storygen
+      API_PREFIX: /api
+      DEBUG: "false"
+      ALLOWED_ORIGINS: http://localhost:5173
+
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GROQ_BASE_URL: ${GROQ_BASE_URL:-https://api.groq.com/openai/v1}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+      GROQ_MAX_TOKENS: ${GROQ_MAX_TOKENS:-4096}
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+
+    container_name: storygen-frontend
+
+    ports:
+      - "80:80"
+
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
