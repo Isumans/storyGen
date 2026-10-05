@@ -8,7 +8,6 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     ALLOWED_ORIGINS: Annotated[List[str], NoDecode] = []
     GROQ_API_KEY: str | None = None
-    OPENAI_API_KEY: str | None = None
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
     GROQ_MODEL: str = "openai/gpt-oss-20b"
     GROQ_MAX_TOKENS: int = 4096

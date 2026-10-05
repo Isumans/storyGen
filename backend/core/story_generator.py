@@ -14,7 +14,7 @@ class StoryGenerator:
 
     @classmethod
     def _get_llm(cls):
-        api_key = settings.GROQ_API_KEY or settings.OPENAI_API_KEY
+        api_key = settings.GROQ_API_KEY 
         if not api_key:
             raise RuntimeError("Set GROQ_API_KEY to generate stories")
 
