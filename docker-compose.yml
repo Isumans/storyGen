@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:18
+    restart: unless-stopped
     container_name: storygen-db
 
     environment:
@@ -19,11 +20,8 @@ services:
   backend:
     build:
       context: ./backend
-
+    restart: unless-stopped
     container_name: storygen-backend
-
-    ports:
-      - "8000:8000"
 
     environment:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/storygen
@@ -50,7 +48,7 @@ services:
   frontend:
     build:
       context: ./frontend
-
+    restart: unless-stopped
     container_name: storygen-frontend
 
     ports:
