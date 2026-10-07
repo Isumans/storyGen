@@ -27,5 +27,4 @@ jobs:
             --zone=us-central1-a \
             --tunnel-through-iap \
             --quiet \
-            --command="cd /home/isumanmitha/storyGen && docker compose ps"
-
+            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && docker compose ps'"
