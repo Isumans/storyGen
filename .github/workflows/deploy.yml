@@ -1,0 +1,40 @@
+name: Deploy StoryGen
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/728996975586/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: storygen-deployer@storygen-devops.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to GCP VM
+        run: |
+          gcloud compute ssh instance-20261005-083623 \
+            --zone=us-central1-a \
+            --tunnel-through-iap \
+            --quiet \
+            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && git pull --ff-only origin main && docker compose build && docker compose up -d'"
+
+      - name: Verify deployment
+        run: |
+          gcloud compute ssh instance-20261005-083623 \
+            --zone=us-central1-a \
+            --tunnel-through-iap \
+            --quiet \
+            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && docker compose ps'"
