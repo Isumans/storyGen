@@ -1,0 +1,29 @@
+name: GCP Authentication Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  authenticate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/728996975586/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: storygen-deployer@storygen-devops.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Verify Google Cloud identity
+        run: |
+          gcloud auth list
+          gcloud config set project storygen-devops
+          gcloud projects describe storygen-devops --format="value(projectId)"
+          
