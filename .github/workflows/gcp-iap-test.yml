@@ -1,0 +1,29 @@
+name: GCP IAP SSH Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  iap-ssh-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/728996975586/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: storygen-deployer@storygen-devops.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Test IAP SSH connection
+        run: |
+          gcloud compute ssh instance-20261005-083623 \
+            --zone=us-central1-a \
+            --tunnel-through-iap \
+            --command="hostname && echo 'IAP SSH connection successful'"
