@@ -21,9 +21,11 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Test IAP SSH connection
+      - name: Inspect StoryGen deployment
         run: |
           gcloud compute ssh instance-20261005-083623 \
             --zone=us-central1-a \
             --tunnel-through-iap \
-            --command="hostname && echo 'IAP SSH connection successful'"
+            --quiet \
+            --command="cd /home/isumanmitha/storyGen && docker compose ps"
+
