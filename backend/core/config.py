@@ -1,19 +1,21 @@
-from typing import Annotated, List
-from pydantic_settings import BaseSettings, NoDecode
+from typing import Annotated
+
 from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode
+
 
 class Settings(BaseSettings):
     DATABASE_URL: str
     API_PREFIX: str = "/api"
     DEBUG: bool = True
-    ALLOWED_ORIGINS: Annotated[List[str], NoDecode] = []
+    ALLOWED_ORIGINS: Annotated[list[str], NoDecode] = []
     GROQ_API_KEY: str | None = None
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
     GROQ_MODEL: str = "openai/gpt-oss-20b"
     GROQ_MAX_TOKENS: int = 4096
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
-    def parse_allowed_origins(cls,v:str) -> List[str]:
+    def parse_allowed_origins(cls,v:str) -> list[str]:
         return v.split(",") if v else []
 
     class Config:

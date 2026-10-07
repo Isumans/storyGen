@@ -1,15 +1,16 @@
 import json
 
-from sqlalchemy.orm import Session
-from core.models import StoryLLMResponse, StoryNodeLLM
-from core.config import settings
-
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
+from sqlalchemy.orm import Session
 
+from core.config import settings
+from core.models import StoryLLMResponse, StoryNodeLLM
 from core.prompts import STORY_PROMPT
 from models.story import Story, StoryNode
+
+
 class StoryGenerator:
 
     @classmethod
@@ -59,7 +60,7 @@ class StoryGenerator:
             )
 
         if not isinstance(response_text, str):
-            raise ValueError("The model returned an unsupported response format")
+            raise TypeError("The model returned an unsupported response format")
 
         story_structure = StoryLLMResponse.model_validate(json.loads(response_text))
 

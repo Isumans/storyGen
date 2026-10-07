@@ -12,10 +12,6 @@ function StoryLoader() {
     const [story, setStory] = useState('');
     const [error, setError] = useState(null);
 
-    useEffect(() => {
-        loadStory(id);
-    }, [id]);
-    
     const loadStory = async (storyId) => {
         setLoading(true);
         setError(null);
@@ -34,6 +30,12 @@ function StoryLoader() {
         }
         
     }
+
+    useEffect(() => {
+        loadStory(id);
+    }, [id]);
+    
+    
     const createNewStory = async () => {
         navigate('/');
     }
