@@ -9,6 +9,10 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: storygen-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy to GCP VM
@@ -38,7 +42,7 @@ jobs:
             --zone=us-central1-a \
             --tunnel-through-iap \
             --quiet \
-            --command="sudo -iu isumanmitha bash -lc 'GROQ_API_KEY=\$(gcloud secrets versions access latest --secret=storygen-groq-api-key --project=storygen-devops) && POSTGRES_PASSWORD=\$(gcloud secrets versions access latest --secret=storygen-postgres-password --project=storygen-devops) && printf \"%s\\n\" \"POSTGRES_USER=storygen\" \"POSTGRES_PASSWORD=\$POSTGRES_PASSWORD\" \"GROQ_API_KEY=\$GROQ_API_KEY\" \"GROQ_BASE_URL=https://api.groq.com/openai/v1\" \"GROQ_MODEL=openai/gpt-oss-20b\" \"GROQ_MAX_TOKENS=4096\" \"API_PREFIX=/api\" \"DEBUG=false\" \"ALLOWED_ORIGINS=http://localhost\" > /etc/storygen/storygen.env && chmod 600 /etc/storygen/storygen.env'"
+            --command="sudo -iu isumanmitha bash -lc 'set -e; umask 077; GROQ_API_KEY=\$(gcloud secrets versions access latest --secret=storygen-groq-api-key --project=storygen-devops); POSTGRES_PASSWORD=\$(gcloud secrets versions access latest --secret=storygen-postgres-password --project=storygen-devops); printf \"%s\\n\" \"POSTGRES_USER=storygen\" \"POSTGRES_PASSWORD=\$POSTGRES_PASSWORD\" \"GROQ_API_KEY=\$GROQ_API_KEY\" \"GROQ_BASE_URL=https://api.groq.com/openai/v1\" \"GROQ_MODEL=openai/gpt-oss-20b\" \"GROQ_MAX_TOKENS=4096\" \"API_PREFIX=/api\" \"DEBUG=false\" \"ALLOWED_ORIGINS=http://localhost\" > /etc/storygen/storygen.env; chmod 600 /etc/storygen/storygen.env'"
 
       - name: Build and restart application
         run: |
@@ -46,7 +50,15 @@ jobs:
             --zone=us-central1-a \
             --tunnel-through-iap \
             --quiet \
-            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && docker compose --env-file /etc/storygen/storygen.env up -d --build'"
+            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && docker compose --env-file /etc/storygen/storygen.env up -d --build --force-recreate'"
+
+      - name: Wait for backend health
+        run: |
+          gcloud compute ssh instance-20261005-083623 \
+            --zone=us-central1-a \
+            --tunnel-through-iap \
+            --quiet \
+            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && for i in {1..12}; do STATUS=\$(docker inspect -f \"{{.State.Health.Status}}\" storygen-backend 2>/dev/null || true); echo \"Backend health: \$STATUS\"; if [ \"\$STATUS\" = \"healthy\" ]; then exit 0; fi; sleep 5; done; echo \"Backend did not become healthy within 60 seconds\"; docker compose --env-file /etc/storygen/storygen.env logs --tail=50 backend; exit 1'"
 
       - name: Verify deployment
         run: |
@@ -55,14 +67,6 @@ jobs:
             --tunnel-through-iap \
             --quiet \
             --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && docker compose --env-file /etc/storygen/storygen.env ps'"
-
-      - name: Wait for backend health
-        run: |
-          gcloud compute ssh instance-20261005-083623 \
-            --zone=us-central1-a \
-            --tunnel-through-iap \
-            --quiet \
-            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && for i in {1..12}; do STATUS=\$(docker inspect --format=\"{{.State.Health.Status}}\" storygen-backend 2>/dev/null || true); echo \"Backend health: \$STATUS\"; if [ \"\$STATUS\" = \"healthy\" ]; then exit 0; fi; sleep 5; done; echo \"Backend did not become healthy within 60 seconds\"; docker compose --env-file /etc/storygen/storygen.env logs --tail=50 backend; exit 1'"
 
       - name: Verify backend health endpoint
         run: |
