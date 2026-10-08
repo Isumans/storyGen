@@ -1,11 +1,7 @@
-import uuid
-from typing import Optional
-from fastapi import APIRouter, Depends, Response, exceptions, Cookie, responses, BackgroundTasks
-from datetime import datetime
+from fastapi import APIRouter, Depends, exceptions
 from sqlalchemy.orm import Session
 
-from db.database import get_db, SessionLocal
-from models import job
+from db.database import get_db
 from models.job import StoryJob
 from schemas.job import StoryJobResponse
 

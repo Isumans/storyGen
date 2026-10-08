@@ -1,10 +1,11 @@
-from typing import List, Optional, Dict
-from pydantic import BaseModel, Field
 from datetime import datetime
+
+from pydantic import BaseModel, Field
+
 
 class StoryOptionsSchema(BaseModel):
     text: str
-    node_id: Optional[int] = None
+    node_id: int | None = None
 
 class StoryNodeBase(BaseModel):
     content: str
@@ -13,14 +14,14 @@ class StoryNodeBase(BaseModel):
 
 class completeStoryNodeResponse(StoryNodeBase):
     id: int
-    options: List[StoryOptionsSchema] = []
+    options: list[StoryOptionsSchema] = []
 
     class Config:
         from_attributes = True
 
 class StoryBase(BaseModel):
     title: str
-    session_id: Optional[str] = None
+    session_id: str | None = None
 
     class Config:
             from_attributes = True
@@ -32,7 +33,7 @@ class completeStoryResponse(StoryBase):
     id: int
     created_at: datetime
     root_node: completeStoryNodeResponse
-    all_nodes: Dict[int, completeStoryNodeResponse] = Field(default_factory=dict)
+    all_nodes: dict[int, completeStoryNodeResponse] = Field(default_factory=dict)
     
     class Config:
         from_attributes = True

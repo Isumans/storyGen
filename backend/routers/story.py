@@ -1,26 +1,33 @@
 import uuid
-from typing import Optional
-from fastapi import APIRouter, Depends, Response, exceptions, Cookie, responses, BackgroundTasks
-from datetime import datetime
+from datetime import UTC, datetime
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Cookie,
+    Depends,
+    Response,
+    exceptions,
+)
 from sqlalchemy.orm import Session
 
-from db.database import get_db, SessionLocal
-from models import job
-from models.story import Story, StoryNode
-from models.job import StoryJob
-from schemas.story import (
-    completeStoryNodeResponse, completeStoryResponse, CreateStoryRequest
-)
-from schemas.job import StoryJobResponse
 from core.story_generator import StoryGenerator
-
+from db.database import SessionLocal, get_db
+from models.job import StoryJob
+from models.story import Story, StoryNode
+from schemas.job import StoryJobResponse
+from schemas.story import (
+    CreateStoryRequest,
+    completeStoryNodeResponse,
+    completeStoryResponse,
+)
 
 router = APIRouter(
     prefix="/stories",
     tags=["stories"]
 )
 
-def get_session_id(session_id:Optional[str] = Cookie(None)):
+def get_session_id(session_id:str | None = Cookie(None)):
     if not session_id:
         session_id = str(uuid.uuid4())
     return session_id
@@ -71,15 +78,15 @@ def generate_story_task(job_id:str, theme:str, session_id:str):
 
             job.story_id = story.id
             job.status = "completed"
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             db.commit()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             db.rollback()
             job = db.query(StoryJob).filter(StoryJob.job_id == job_id).first()
             if not job:
                 return
             job.status = "failed"
-            job.completed_at = datetime.now()
+            job.completed_at = datetime.now(UTC)
             job.error = str(e)
             db.commit()
     finally:
