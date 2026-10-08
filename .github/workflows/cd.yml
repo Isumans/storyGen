@@ -1,0 +1,76 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy to GCP VM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/728996975586/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: storygen-deployer@storygen-devops.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to GCP VM
+        run: |
+          gcloud compute ssh instance-20261005-083623 \
+            --zone=us-central1-a \
+            --tunnel-through-iap \
+            --quiet \
+            --command="sudo -iu isumanmitha bash -lc '
+              set -e
+
+              cd /home/isumanmitha/storyGen
+
+              git pull --ff-only origin main
+
+              GROQ_API_KEY=\$(gcloud secrets versions access latest \
+                --secret=storygen-groq-api-key \
+                --project=storygen-devops)
+
+              POSTGRES_PASSWORD=\$(gcloud secrets versions access latest \
+                --secret=storygen-postgres-password \
+                --project=storygen-devops)
+
+              cat > /etc/storygen/storygen.env <<EOF
+              POSTGRES_USER=storygen
+              POSTGRES_PASSWORD=\$POSTGRES_PASSWORD
+              GROQ_API_KEY=\$GROQ_API_KEY
+
+              GROQ_BASE_URL=https://api.groq.com/openai/v1
+              GROQ_MODEL=openai/gpt-oss-20b
+              GROQ_MAX_TOKENS=4096
+
+              API_PREFIX=/api
+              DEBUG=false
+              ALLOWED_ORIGINS=http://localhost
+              EOF
+
+              chmod 600 /etc/storygen/storygen.env
+
+              docker compose --env-file /etc/storygen/storygen.env up -d --build
+            '"
+
+      - name: Verify deployment
+        run: |
+          gcloud compute ssh instance-20261005-083623 \
+            --zone=us-central1-a \
+            --tunnel-through-iap \
+            --quiet \
+            --command="sudo -iu isumanmitha bash -lc '
+              cd /home/isumanmitha/storyGen
+              docker compose --env-file /etc/storygen/storygen.env ps
+            '"
