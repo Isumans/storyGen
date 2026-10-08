@@ -24,45 +24,29 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Deploy to GCP VM
+      - name: Pull latest code
         run: |
           gcloud compute ssh instance-20261005-083623 \
             --zone=us-central1-a \
             --tunnel-through-iap \
             --quiet \
-            --command="sudo -iu isumanmitha bash -lc '
-              set -e
+            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && git pull --ff-only origin main'"
 
-              cd /home/isumanmitha/storyGen
+      - name: Refresh runtime secrets
+        run: |
+          gcloud compute ssh instance-20261005-083623 \
+            --zone=us-central1-a \
+            --tunnel-through-iap \
+            --quiet \
+            --command="sudo -iu isumanmitha bash -lc 'GROQ_API_KEY=\$(gcloud secrets versions access latest --secret=storygen-groq-api-key --project=storygen-devops) && POSTGRES_PASSWORD=\$(gcloud secrets versions access latest --secret=storygen-postgres-password --project=storygen-devops) && printf \"%s\\n\" \"POSTGRES_USER=storygen\" \"POSTGRES_PASSWORD=\$POSTGRES_PASSWORD\" \"GROQ_API_KEY=\$GROQ_API_KEY\" \"GROQ_BASE_URL=https://api.groq.com/openai/v1\" \"GROQ_MODEL=openai/gpt-oss-20b\" \"GROQ_MAX_TOKENS=4096\" \"API_PREFIX=/api\" \"DEBUG=false\" \"ALLOWED_ORIGINS=http://localhost\" > /etc/storygen/storygen.env && chmod 600 /etc/storygen/storygen.env'"
 
-              git pull --ff-only origin main
-
-              GROQ_API_KEY=\$(gcloud secrets versions access latest \
-                --secret=storygen-groq-api-key \
-                --project=storygen-devops)
-
-              POSTGRES_PASSWORD=\$(gcloud secrets versions access latest \
-                --secret=storygen-postgres-password \
-                --project=storygen-devops)
-
-              cat > /etc/storygen/storygen.env <<EOF
-              POSTGRES_USER=storygen
-              POSTGRES_PASSWORD=\$POSTGRES_PASSWORD
-              GROQ_API_KEY=\$GROQ_API_KEY
-
-              GROQ_BASE_URL=https://api.groq.com/openai/v1
-              GROQ_MODEL=openai/gpt-oss-20b
-              GROQ_MAX_TOKENS=4096
-
-              API_PREFIX=/api
-              DEBUG=false
-              ALLOWED_ORIGINS=http://localhost
-              EOF
-
-              chmod 600 /etc/storygen/storygen.env
-
-              docker compose --env-file /etc/storygen/storygen.env up -d --build
-            '"
+      - name: Build and restart application
+        run: |
+          gcloud compute ssh instance-20261005-083623 \
+            --zone=us-central1-a \
+            --tunnel-through-iap \
+            --quiet \
+            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && docker compose --env-file /etc/storygen/storygen.env up -d --build'"
 
       - name: Verify deployment
         run: |
@@ -70,7 +54,12 @@ jobs:
             --zone=us-central1-a \
             --tunnel-through-iap \
             --quiet \
-            --command="sudo -iu isumanmitha bash -lc '
-              cd /home/isumanmitha/storyGen
-              docker compose --env-file /etc/storygen/storygen.env ps
-            '"
+            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && docker compose --env-file /etc/storygen/storygen.env ps'"
+
+      - name: Verify backend health
+        run: |
+          gcloud compute ssh instance-20261005-083623 \
+            --zone=us-central1-a \
+            --tunnel-through-iap \
+            --quiet \
+            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && docker compose --env-file /etc/storygen/storygen.env exec -T backend python -c \"import urllib.request; print(urllib.request.urlopen(\\\"http://localhost:8000/health\\\").read().decode())\"'"
