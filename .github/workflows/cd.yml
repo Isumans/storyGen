@@ -54,13 +54,14 @@ jobs:
             --quiet \
             --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && docker compose --env-file /etc/storygen/storygen.env up -d --build --force-recreate'"
 
+      
       - name: Wait for backend health
         run: |
           gcloud compute ssh instance-20261005-083623 \
             --zone=us-central1-a \
             --tunnel-through-iap \
             --quiet \
-            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && for i in {1..12}; do STATUS=\$(docker inspect --format=\"{{.State.Health.Status}}\" storygen-backend 2>/dev/null || true); echo \"Backend health: \$STATUS\"; if [ \"\$STATUS\" = \"healthy\" ]; then exit 0; fi; sleep 5; done; echo \"Backend failed to become healthy within 60 seconds\"; docker compose --env-file /etc/storygen/storygen.env logs --tail=80 backend; exit 1'"
+            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && for i in {1..12}; do if docker exec storygen-backend python -c \"import urllib.request; r=urllib.request.urlopen(\\\"http://localhost:8000/health\\\", timeout=3); print(r.status)\" 2>/dev/null | grep -qx 200; then echo \"Backend HTTP health check passed\"; exit 0; fi; echo \"Waiting for backend HTTP health check...\"; sleep 5; done; echo \"Backend did not pass HTTP health check within 60 seconds\"; docker compose --env-file /etc/storygen/storygen.env logs --tail=80 backend; exit 1'"
 
       - name: Verify deployment
         run: |
