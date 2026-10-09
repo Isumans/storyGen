@@ -16,20 +16,21 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy to GCP VM
+    name: Deploy StoryGen to GCP
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
-      - name: Authenticate to Google Cloud
+      - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/728996975586/locations/global/workloadIdentityPools/github-actions/providers/github
           service_account: storygen-deployer@storygen-devops.iam.gserviceaccount.com
 
-      - name: Set up gcloud
+      - name: Set up Google Cloud CLI
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Pull latest code
+      - name: Pull latest production code
         run: |
           gcloud compute ssh instance-20261005-083623 \
             --zone=us-central1-a \
@@ -43,7 +44,7 @@ jobs:
             --zone=us-central1-a \
             --tunnel-through-iap \
             --quiet \
-            --command="sudo -iu isumanmitha bash -lc 'GROQ_API_KEY=\$(gcloud secrets versions access latest --secret=storygen-groq-api-key --project=storygen-devops) && POSTGRES_PASSWORD=\$(gcloud secrets versions access latest --secret=storygen-postgres-password --project=storygen-devops) && umask 077 && printf \"%s\\n\" \"POSTGRES_USER=storygen\" \"POSTGRES_PASSWORD=\$POSTGRES_PASSWORD\" \"GROQ_API_KEY=\$GROQ_API_KEY\" \"GROQ_BASE_URL=https://api.groq.com/openai/v1\" \"GROQ_MODEL=openai/gpt-oss-20b\" \"GROQ_MAX_TOKENS=4096\" \"API_PREFIX=/api\" \"DEBUG=false\" \"ALLOWED_ORIGINS=http://localhost\" > /etc/storygen/storygen.env && chmod 600 /etc/storygen/storygen.env'"
+            --command="sudo -iu isumanmitha /home/isumanmitha/bin/refresh-storygen-secrets.sh"
 
       - name: Build and restart application
         run: |
@@ -59,7 +60,7 @@ jobs:
             --zone=us-central1-a \
             --tunnel-through-iap \
             --quiet \
-            --command="sudo -iu isumanmitha bash -lc 'for i in {1..12}; do RESPONSE=\$(docker exec storygen-backend python -c \"import urllib.request; print(urllib.request.urlopen(\\\"http://localhost:8000/health\\\", timeout=3).read().decode())\" 2>/dev/null || true); echo \"Backend response: \$RESPONSE\"; if [ \"\$RESPONSE\" = \"{\\\"status\\\":\\\"healthy\\\"}\" ]; then exit 0; fi; sleep 5; done; echo \"Backend did not become healthy within 60 seconds\"; docker compose --env-file /etc/storygen/storygen.env logs --tail=50 backend; exit 1'"
+            --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && for i in {1..12}; do STATUS=\$(docker inspect --format=\"{{.State.Health.Status}}\" storygen-backend 2>/dev/null || true); echo \"Backend health: \$STATUS\"; if [ \"\$STATUS\" = \"healthy\" ]; then exit 0; fi; sleep 5; done; echo \"Backend failed to become healthy within 60 seconds\"; docker compose --env-file /etc/storygen/storygen.env logs --tail=80 backend; exit 1'"
 
       - name: Verify deployment
         run: |
@@ -68,11 +69,3 @@ jobs:
             --tunnel-through-iap \
             --quiet \
             --command="sudo -iu isumanmitha bash -lc 'cd /home/isumanmitha/storyGen && docker compose --env-file /etc/storygen/storygen.env ps'"
-
-      - name: Verify backend health endpoint
-        run: |
-          gcloud compute ssh instance-20261005-083623 \
-            --zone=us-central1-a \
-            --tunnel-through-iap \
-            --quiet \
-            --command="sudo -iu isumanmitha bash -lc 'docker exec storygen-backend python -c \"import urllib.request; print(urllib.request.urlopen(\\\"http://localhost:8000/health\\\").read().decode())\"'"
